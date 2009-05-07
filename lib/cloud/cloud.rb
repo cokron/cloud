@@ -25,8 +25,8 @@ class PaperSizes
       }
     }
 
-    (1..9).step(2) {|x| 
-      ["A","B","C"].each {|type|     
+    (1..9).step(2) {|x|
+      ["A","B","C"].each {|type|
         height = @paper_sizes[type + (x-1).to_s][:width]
         width =  @paper_sizes[type + (x+1).to_s][:height]
         @paper_sizes[type + x.to_s] = {:height => height, :width => width}
@@ -59,7 +59,7 @@ class Palette
 end
 
 class WordCloud
-  attr_accessor :text, :word_freq, :min_text_size, :font, :pdf, :boxes, :canvas, :ordered_boxes, :placed_boxes, 
+  attr_accessor :text, :word_freq, :min_text_size, :font, :pdf, :boxes, :canvas, :ordered_boxes, :placed_boxes,
                 :placements, :palette, :common, :max_words, :pdf_file, :min_freq, :storage, :distance_func
   def initialize(options)
     if (!options[:file] && !options[:rss] && !options[:delicious])
@@ -67,12 +67,14 @@ class WordCloud
     end
     if options[:lang] == "DA"
       @common = COMMON_DA + COMMON_EN
+    elsif options[:lang] == "DE"
+      @common = COMMON_DE
     else
       @common = COMMON_EN
     end
-    
+
     @max_words = options[:max_words] ? options[:max_words] : 100
-      
+
     @text = ""
     if options[:file]
       File.open(options[:file], "r") do |infile|
@@ -90,7 +92,7 @@ class WordCloud
       }
       @word_freq = self.compute_frequencies
     elsif options[:delicious]
-      converter = Iconv.new( 'ISO-8859-15//IGNORE//TRANSLIT', 'utf-8') 
+      converter = Iconv.new( 'ISO-8859-15//IGNORE//TRANSLIT', 'utf-8')
       xml = Net::HTTP.get_response(URI.parse("http://feeds.delicious.com/v2/rss/tags/#{options[:delicious]}")).body
       doc = Hpricot::XML(xml)
       freq = Hash.new(0)
@@ -105,15 +107,15 @@ class WordCloud
       @min_freq = j
       @word_freq = freq
     end
-    
-    @min_text_size = options[:min_text_size] ? options[:min_text_size] : 12 
+
+    @min_text_size = options[:min_text_size] ? options[:min_text_size] : 12
     @font = options[:font] ? options[:font] : "Times-Roman"
-    
-    @palette = options[:palette] ? Palette.new(options[:palette]) : Palette.new("bw")  
-    @pdf = PDF::Writer.new 
+
+    @palette = options[:palette] ? Palette.new(options[:palette]) : Palette.new("bw")
+    @pdf = PDF::Writer.new
     @pdf.select_font @font
-    
-    
+
+
     @min_text_size = @min_text_size/@min_freq
     @boxes = self.init_boxes
     @ordered_boxes = @boxes.sort {|a,b| @word_freq[b[0]] <=> @word_freq[a[0]]}
@@ -138,7 +140,7 @@ class WordCloud
 
   def compute_frequencies
     words = @text.split($/).join(" ").squeeze(" ").split(" ")
-    converter = Iconv.new( 'ISO-8859-15//IGNORE//TRANSLIT', 'utf-8')  
+    converter = Iconv.new( 'ISO-8859-15//IGNORE//TRANSLIT', 'utf-8')
     freq = Hash.new(0)
     count = 0
 
@@ -149,8 +151,8 @@ class WordCloud
       if word == ""
         next
       end
-      word = word.downcase      
-        
+      word = word.downcase
+
       if !self.common.include? word
         word = converter.iconv(word)
         freq[word] = freq[word] +1
@@ -181,7 +183,7 @@ class WordCloud
     total_area = 0
     sizes.each_value {|value|
       total_area = total_area +  value[:area]
-    } 
+    }
 
     ordered_sizes = PaperSizes.new.ordered_sizes
     paper = ""
@@ -261,7 +263,7 @@ class WordCloud
     width =  self.pdf.text_width("   ",self.min_text_size)
     height = self.pdf.font_height(self.min_text_size)
     unit_box.set_from_width_and_height(width,height)
-    self.placements.each_with_index {|placement,index| 
+    self.placements.each_with_index {|placement,index|
       if diagonal && placement.distance_to_last >= diagonal
         next
       else
@@ -287,7 +289,7 @@ class WordCloud
         end
       end
     }
-  end      
+  end
 
   def place_boxes(rotation_type)
     if self.storage && File.exist?(self.storage)
@@ -295,7 +297,7 @@ class WordCloud
       p "words loaded from file"
       return
     end
-    
+
     self.place_first_box(rotation_type)
     i = 0
     unit_box = WordBox::Box.new
@@ -327,7 +329,7 @@ class WordCloud
       final_placement = nil
       position = ""
       j = 0
-      self.placements.each_with_index {|placement,index| 
+      self.placements.each_with_index {|placement,index|
         j = j+1
         placed = false
         final_placement = index
@@ -347,7 +349,7 @@ class WordCloud
           }
           if ok
             placed = true
-            break  
+            break
           end
         }
         if placed
@@ -392,7 +394,7 @@ a about after again against all an another any and are as at
 be being been before but by
 can could
 did do don't down
-each 
+each
 few from for
 get got great
 had has have he her here his him himself hers how
@@ -402,9 +404,9 @@ like
 made me more most my
 no not
 of off on once one only or other our out over own
-said she should so some such 
+said she should so some such
 than that the their them then there these they this those through to too
-under until up 
+under until up
 very
 was wasn't we were we're what when where which while who why will with would wouldn't
 you your)
@@ -428,3 +430,26 @@ til
 ud under
 var ved vil vil ville være været vi vores vha
 )
+
+#source:
+#http://de.wikipedia.org/wiki/Liste_der_h%C3%A4ufigsten_W%C3%B6rter_der_deutschen_Sprache
+#removed some common words from that list, such as Mann (man) or Liebe (love)
+COMMON_DE = %w(
+die der und in zu den das nicht von sie ist des sich mit dem dass daß
+er es ein ich auf so eine auch als an nach wie im für
+man aber aus durch wenn nur war noch werden bei hat wir was wird sein
+einen welche sind oder um haben einer mir über ihm diese einem ihr uns
+da zum kann doch vor dieser mich ihn du hatte seine mehr am denn nun
+unter sehr selbst schon hier bis habe ihre dann ihnen seiner alle
+wieder meine gegen vom ganz einzelnen wo muss muß ohne eines
+können sei ja wurde jetzt immer seinen wohl dieses ihren würde diesen
+sondern weil welcher nichts diesem alles waren will viel mein also
+soll worden lassen dies machen ihrer weiter recht etwas keine seinem
+ob dir allen großen müssen welches wäre erst einmal hätte zwei dich
+allein während anders kein damit gar euch sollte konnte ersten deren
+zwischen wollen denen dessen sagen bin gut darauf wurden weiß gewesen
+bald weit große solche hatten eben andern beiden macht sehen ganze
+anderen lange wer ihrem zwar gemacht dort kommen heute werde derselben
+ganzen lässt läßt vielleicht meiner
+)
+
